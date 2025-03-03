@@ -25,6 +25,38 @@ data_cd8 <- data |>
 ################################################################################
 # EDA
 ################################################################################
+nrow(data) #56
+names(data)
+
+table(data$SubjectID)
+table(data$Group)
+table(data$QFTStatus)
+table(data$MonthofSample)
+table(data$Stimulation)
+table(data$Population)
+
+hist(data$`IL2+CD107+CD154+IFNg+TNF+`)
+hist(data$`IL2+CD107+CD154+IFNg+TNF-`)
+hist(data$`IL2+CD107+CD154+IFNg-TNF+`)
+hist(data$`IL2+CD107+CD154+IFNg-TNF-`)
+hist(data$`IL2+CD107+CD154-IFNg+TNF+`)
+hist(data$`IL2+CD107+CD154-IFNg+TNF-`)
+hist(data$`IL2+CD107+CD154-IFNg-TNF+`)
+hist(data$`IL2+CD107+CD154-IFNg-TNF-`)
+hist(data$`IL2+CD107-CD154+IFNg+TNF+`)
+hist(data$`IL2+CD107-CD154+IFNg+TNF-`)
+hist(data$`IL2+CD107-CD154+IFNg-TNF+`)
+hist(data$`IL2+CD107-CD154+IFNg-TNF-`)
+hist(data$`IL2+CD107-CD154-IFNg+TNF+`)
+hist(data$`IL2+CD107-CD154-IFNg+TNF-`)
+
+ranges <- as.data.frame(matrix(NA, nrow = ncol(data[7:38]), ncol = 2))
+row.names(ranges) <- colnames(data[7:38])
+
+
+for(col in 1:ncol(data[7:38])){
+  ranges[col,] <- range(data[7:38][,col], na.rm = TRUE)
+}
 
 ################################################################################
 # Clustering

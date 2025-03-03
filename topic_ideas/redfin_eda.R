@@ -1,5 +1,9 @@
 # Exploration of Redfin data
-
+# How many vars
+# What questions to answer
+# How many obs
+# What type of data
+# Few paragraphs
 ################################################################################
 # Install packages
 ################################################################################
@@ -28,6 +32,31 @@ colnames(data)
 ################################################################################
 # EDA
 ################################################################################
+nrow(data) #56
+names(data)
+# table(data$Sites)
+hist(data$EC)
+hist(data$DO)
+hist(data$Temp)
+hist(data$Ammonia)
+hist(data$Phosphorous)
+hist(data$Nitrite)
+hist(data$Nitrate)
+hist(data$Total_Iron)
+hist(data$Phosphonate)
+hist(data$TDS)
+hist(data$Inorg_Nitrogen)
+hist(data$Elevation)
+hist(data$Flow)
+hist(data$Slope)
+
+ranges <- as.data.frame(matrix(NA, nrow = ncol(data), ncol = 2))
+row.names(ranges) <- colnames(data)
+
+
+for(col in 1:ncol(data)){
+  ranges[col,] <- range(data[,col], na.rm = TRUE)
+}
 
 ################################################################################
 # Clustering
