@@ -42,12 +42,12 @@ hist(mat[,5])
 hist(mat[,6])
 hist(mat[,7])
 
-ranges <- as.data.frame(matrix(NA, nrow = ncol(data[7:38]), ncol = 2))
-row.names(ranges) <- colnames(data[7:38])
+ranges <- as.data.frame(matrix(NA, nrow = ncol(data_us[7:38]), ncol = 2))
+row.names(ranges) <- colnames(data_us[7:38])
 
 
-for(col in 1:ncol(data[7:38])){
-  ranges[col,] <- range(data[7:38][,col], na.rm = TRUE)
+for(col in 1:ncol(data_us[7:38])){
+  ranges[col,] <- range(data_us[7:38][,col], na.rm = TRUE)
 }
 
 ################################################################################

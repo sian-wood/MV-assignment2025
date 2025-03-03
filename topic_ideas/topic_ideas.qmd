@@ -1,0 +1,151 @@
+---
+title: "STA5069Z Topic Ideas"
+author: "Sian Wood"
+format: pdf
+editor: visual
+toc: true
+bibliography: bibliography.bib
+execute: 
+  error: false
+  warning: false
+  echo: false
+---
+
+```{r}
+################################################################################
+# Install packages
+################################################################################
+library(readxl)
+library(dplyr)
+library(cluster)
+library(vegan)
+library(ggplot2)
+library(mclust)
+```
+
+\newpage
+
+# Redfin Data
+
+This dataset originates from a study conducted along the Kars River by Keir Lynch in 2018. The aim of this study was to identify predictors of the presence and abundance of the redfin fish [@Morch2025].
+
+The dataset contains 47 variables collected at 56 sites along the river. Two variables are binary, indicating whether any indigenous species were detected and indicating whether any non-indigenous species were detected at each site. The remaining variables are numeric. Six are count data for the number of fish of given species which were detected at each site. Variables relating to water quality, geographic features, substrates, debris, macrophyte presence, canopy and river depth and width are available. The variables relating to substrates, debris, macrophyte presence, canopy and river depth and width are values given as the proportion of the site with a given characteristic. The ranges of each of these variables can be seen in @tbl-redfin.
+
+The research question I wish to answer using these data is "What are the predictors of the presence and abundance of six fish species at sites on the Kars River?". This would necessitate a multivariate analysis with at least six response variables and up to 41 explanatory variables.
+
+```{r}
+#| label: tbl-redfin
+################################################################################
+# Read in data
+################################################################################
+data_rf <- read_excel("ZivaHub_RawData.xlsx", sheet = "Proportional Converted to %")
+# Neaten dataframe
+colnames(data_rf) <- data_rf[1,]
+data_rf <- data_rf[2:nrow(data_rf),]
+data_rf <- data_rf |> mutate(across(everything(), as.numeric))
+# Update column names so easier to work with 
+colnames(data_rf)[c(10,13)] <- c("Total_Iron", "Inorg_Nitrogen")
+# Remove response var, factor/binary vars, and other species found (feels like some species may always be found together)
+
+
+################################################################################
+# EDA
+################################################################################
+# nrow(data_rf) #56
+# names(data_rf)
+# # table(data_rf$Sites)
+# hist(data_rf$EC)
+# hist(data_rf$DO)
+# hist(data_rf$Temp)
+# hist(data_rf$Ammonia)
+# hist(data_rf$Phosphorous)
+# hist(data_rf$Nitrite)
+# hist(data_rf$Nitrate)
+# hist(data_rf$Total_Iron)
+# hist(data_rf$Phosphonate)
+# hist(data_rf$TDS)
+# hist(data_rf$Inorg_Nitrogen)
+# hist(data_rf$Elevation)
+# hist(data_rf$Flow)
+# hist(data_rf$Slope)
+# 
+# data_rf$`No Woody Debris`
+
+ranges_rf <- as.data.frame(matrix(NA, nrow = ncol(data_rf), ncol = 2))
+row.names(ranges_rf) <- colnames(data_rf)
+
+
+for(col in 1:ncol(data_rf)){
+  ranges_rf[col,] <- round(range(data_rf[,col], na.rm = TRUE), 2)
+}
+
+knitr::kable(ranges_rf, row.names = TRUE, col.names = c("Minimum", "Maximum"), caption = "The ranges of every variable available in the Redfin Dataset")
+
+```
+
+# Mtb Data
+
+This dataset includes metadata regarding the participants of an Adolescent Cohort Study, as well as cellular responses which were measured after stimulating Peripheral blood mononuclear cells (PBMCs) of the study participants [@Lloyd2021]. PBMCs were collected from the same participants at 6-monthly intervals, adding a longitudinal aspect to these data. This could be incorporated into the analysis, or the data could be filtered for a single time point.
+
+A multidimensional analysis has already been conducted on this dataset by @Lloyd2021.01.27.21250605.
+
+The research question I wish to answer using these data is "Are cellular responses to the stimulation of PBMCs effective predictors of QFT value, QFT value and status?". Other potential response variables could be BMI and type of stimulation used.
+
+The data contain information from 57 participants, most of whom had blood samples collected and tested at four time points. Each blood sample was stimulated using four different methods, recorded as 'Esp', 'Mtb-lysate', 'E6C10' and 'SEB'. A final part of each sample was left unstimulated.
+
+Each observation in the TB Dataset is made up of the participant ID, their QFT status, the month post recruitment at which the sample was taken (0, 6, 12, 18), the form of stimulation, the cell population (CD4 or CD8) and the cellular responses. The ranges of each of these responses are detailed in @tbl-tb. A separate dataset containing the participants' metadata (e.g. participant ID, age, BMI, exposure to household contacts etc.) is also available.
+
+```{r}
+#| label: tbl-tb
+################################################################################
+# Read in data
+################################################################################
+data_tb <- read_excel("Lloyd21_Manuscript.xlsx", sheet = "CD4 and CD8 Counts")
+
+# Choose one month(0) and one population(CD4)
+data_cd4 <- data_tb |>
+  filter(MonthofSample == 0 & Population == "CD4")
+
+data_cd8 <- data_tb |>
+  filter(MonthofSample == 0 & Population == "CD8")
+
+################################################################################
+# EDA
+################################################################################
+# nrow(data_tb) #56
+# names(data_tb)
+# 
+# length(unique(data_tb$SubjectID))
+# table(data_tb$Group)
+# table(data_tb$QFTStatus)
+# table(data_tb$MonthofSample)
+# table(data_tb$Stimulation)
+# table(data_tb$Population)
+
+# hist(data_tb$`IL2+CD107+CD154+IFNg+TNF+`)
+# hist(data_tb$`IL2+CD107+CD154+IFNg+TNF-`)
+# hist(data_tb$`IL2+CD107+CD154+IFNg-TNF+`)
+# hist(data_tb$`IL2+CD107+CD154+IFNg-TNF-`)
+# hist(data_tb$`IL2+CD107+CD154-IFNg+TNF+`)
+# hist(data_tb$`IL2+CD107+CD154-IFNg+TNF-`)
+# hist(data_tb$`IL2+CD107+CD154-IFNg-TNF+`)
+# hist(data_tb$`IL2+CD107+CD154-IFNg-TNF-`)
+# hist(data_tb$`IL2+CD107-CD154+IFNg+TNF+`)
+# hist(data_tb$`IL2+CD107-CD154+IFNg+TNF-`)
+# hist(data_tb$`IL2+CD107-CD154+IFNg-TNF+`)
+# hist(data_tb$`IL2+CD107-CD154+IFNg-TNF-`)
+# hist(data_tb$`IL2+CD107-CD154-IFNg+TNF+`)
+# hist(data_tb$`IL2+CD107-CD154-IFNg+TNF-`)
+
+ranges_tb <- as.data.frame(matrix(NA, nrow = ncol(data_tb[7:38]), ncol = 2))
+row.names(ranges_tb) <- colnames(data_tb[7:38])
+
+
+for(col in 1:ncol(data_tb[7:38])){
+  ranges_tb[col,] <- range(data_tb[7:38][,col], na.rm = TRUE)
+}
+
+knitr::kable(ranges_tb, row.names = TRUE, col.names = c("Minimum", "Maximum"), caption = "The ranges of every variable available in the TB Dataset")
+```
+
+# References

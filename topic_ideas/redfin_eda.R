@@ -17,7 +17,7 @@ library(mclust)
 ################################################################################
 # Read in data
 ################################################################################
-data <- read_excel("ZivaHub_RawData.xlsx", sheet = "Raw Data")
+data <- read_excel("ZivaHub_RawData.xlsx", sheet = "Proportional Converted to %")
 # Neaten dataframe
 colnames(data) <- data[1,]
 data <- data[2:nrow(data),]
@@ -25,37 +25,38 @@ data <- data |> mutate(across(everything(), as.numeric))
 # Update column names so easier to work with 
 colnames(data)[c(10,13)] <- c("Total_Iron", "Inorg_Nitrogen")
 # Remove response var, factor/binary vars, and other species found (feels like some species may always be found together)
-data <- data[,1:16]
-colnames(data)
-# Remove factor variables
+data <- data[,1:40]
+
 
 ################################################################################
 # EDA
 ################################################################################
-nrow(data) #56
-names(data)
-# table(data$Sites)
-hist(data$EC)
-hist(data$DO)
-hist(data$Temp)
-hist(data$Ammonia)
-hist(data$Phosphorous)
-hist(data$Nitrite)
-hist(data$Nitrate)
-hist(data$Total_Iron)
-hist(data$Phosphonate)
-hist(data$TDS)
-hist(data$Inorg_Nitrogen)
-hist(data$Elevation)
-hist(data$Flow)
-hist(data$Slope)
+# nrow(data) #56
+# names(data)
+# # table(data$Sites)
+# hist(data$EC)
+# hist(data$DO)
+# hist(data$Temp)
+# hist(data$Ammonia)
+# hist(data$Phosphorous)
+# hist(data$Nitrite)
+# hist(data$Nitrate)
+# hist(data$Total_Iron)
+# hist(data$Phosphonate)
+# hist(data$TDS)
+# hist(data$Inorg_Nitrogen)
+# hist(data$Elevation)
+# hist(data$Flow)
+# hist(data$Slope)
+# 
+# data$`No Woody Debris`
 
 ranges <- as.data.frame(matrix(NA, nrow = ncol(data), ncol = 2))
 row.names(ranges) <- colnames(data)
 
 
 for(col in 1:ncol(data)){
-  ranges[col,] <- range(data[,col], na.rm = TRUE)
+  ranges[col,] <- round(range(data[,col], na.rm = TRUE), 3)
 }
 
 ################################################################################
