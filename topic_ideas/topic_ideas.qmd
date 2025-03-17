@@ -1,6 +1,6 @@
 ---
 title: "STA5069Z Topic Ideas"
-author: "Sian Wood"
+author: "Sian Wood - WDXSIA001"
 format: pdf
 editor: visual
 toc: true
@@ -21,6 +21,7 @@ library(cluster)
 library(vegan)
 library(ggplot2)
 library(mclust)
+library(xtable)
 ```
 
 \newpage
@@ -31,7 +32,7 @@ This dataset originates from a study conducted along the Kars River by Keir Lync
 
 The dataset contains 47 variables collected at 56 sites along the river. Two variables are binary, indicating whether any indigenous species were detected and indicating whether any non-indigenous species were detected at each site. The remaining variables are numeric. Six are count data for the number of fish of given species which were detected at each site. Variables relating to water quality, geographic features, substrates, debris, macrophyte presence, canopy and river depth and width are available. The variables relating to substrates, debris, macrophyte presence, canopy and river depth and width are values given as the proportion of the site with a given characteristic. The ranges of each of these variables can be seen in @tbl-redfin.
 
-The research question I wish to answer using these data is "What are the predictors of the presence and abundance of six fish species at sites on the Kars River?". This would necessitate a multivariate analysis with at least six response variables and up to 41 explanatory variables.
+The research question I wish to answer using these data is "What are the predictors of the presence and abundance of six fish species at sites on the Kars River?". This would necessitate a multivariate analysis with at least six response variables and up to 41 explanatory variables. The answer to this question could help to identify aspects of the environment which may be advantageous or disadvantageous to the success of our indigenous fish species, as well as those which may be correlated with the over-abundance of non-indigenous species.
 
 ```{r}
 #| label: tbl-redfin
@@ -89,7 +90,7 @@ This dataset includes metadata regarding the participants of an Adolescent Cohor
 
 A multidimensional analysis has already been conducted on this dataset by @Lloyd2021.01.27.21250605.
 
-The research question I wish to answer using these data is "Are cellular responses to the stimulation of PBMCs effective predictors of QFT value, QFT value and status?". Other potential response variables could be BMI and type of stimulation used.
+The research question I wish to answer using these data is "Are cellular responses to the stimulation of PBMCs effective predictors of QFT value and status?". Other potential response variables could be BMI and type of stimulation used. QFT value provides an indication of whether an individual has experienced recent TB infection. The ability to identify individuals who have recently been infected with TB will allow healthcare providers to provide targeted treatment for the prevention of progression to TB disease.
 
 The data contain information from 57 participants, most of whom had blood samples collected and tested at four time points. Each blood sample was stimulated using four different methods, recorded as 'Esp', 'Mtb-lysate', 'E6C10' and 'SEB'. A final part of each sample was left unstimulated.
 
