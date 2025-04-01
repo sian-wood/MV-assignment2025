@@ -90,43 +90,43 @@ s = 18
 
 heun_dat <- data.frame(count = data_rf$`Heuningnes Redfin`[data_rf$`Heuningnes Redfin`>0])
 heun_hist = ggplot(data = heun_dat, aes(x  = count)) + 
-  geom_histogram(bins = 5, fill = "#006633", col = "#005522") + 
+  geom_histogram(bins = 5, fill = "#92C5DE", col = "#6FAFD2") + 
   xlab("Number of Individuals") + 
   ylab("Count") + 
   theme(title = element_text(size = s), text = element_text(size = s))
-ggsave("heun_hist.png", plot = heun_hist, width = 6, height = 4)
+ggsave("plots/heun_hist.png", plot = heun_hist, width = 6, height = 4)
 
 kurp_dat <- data.frame(count = data_rf$`Cape Kurper`[data_rf$`Cape Kurper`>0])
 kurp_hist = ggplot(data = kurp_dat, aes(x  = count)) + 
-  geom_histogram(bins = 5, fill = "#006633", col = "#005522") + 
+  geom_histogram(bins = 5, fill = "#92C5DE", col = "#6FAFD2") +
   xlab("Number of Individuals") + 
   ylab("Count") + 
   theme(title = element_text(size = s), text = element_text(size = s))
-ggsave("kurp_hist.png", plot = kurp_hist, width = 6, height = 4)
+ggsave("plots/kurp_hist.png", plot = kurp_hist, width = 6, height = 4)
 
 gala_dat <- data.frame(count = data_rf$`Cape Galaxias`[data_rf$`Cape Galaxias`>0])
 gala_hist = ggplot(data = gala_dat, aes(x  = count)) + 
-  geom_histogram(bins = 5, fill = "#006633", col = "#005522") + 
+  geom_histogram(bins = 5, fill = "#92C5DE", col = "#6FAFD2") +
   xlab("Number of Individuals") + 
   ylab("Count") + 
   theme(title = element_text(size = s), text = element_text(size = s))
-ggsave("gala_hist.png", plot = gala_hist, width = 6, height = 4)
+ggsave("plots/gala_hist.png", plot = gala_hist, width = 6, height = 4)
 
 bass_dat <- data.frame(count = data_rf$`Spotted Bass`[data_rf$`Spotted Bass`>0])
 bass_hist = ggplot(data = bass_dat, aes(x  = count)) + 
-  geom_histogram(bins = 5, fill = "#006633", col = "#005522") + 
+  geom_histogram(bins = 5, fill = "#92C5DE", col = "#6FAFD2") +
   xlab("Number of Individuals") + 
   ylab("Count") + 
   theme(title = element_text(size = s), text = element_text(size = s))
-ggsave("bass_hist.png", plot = bass_hist, width = 6, height = 4)
+ggsave("plots/bass_hist.png", plot = bass_hist, width = 6, height = 4)
 
 blue_dat <- data.frame(count = data_rf$`Bluegill Sunfish`[data_rf$`Bluegill Sunfish`>0])
 blue_hist = ggplot(data = blue_dat, aes(x  = count)) + 
-  geom_histogram(bins = 5, fill = "#006633", col = "#005522") + 
+  geom_histogram(bins = 5, fill = "#92C5DE", col = "#6FAFD2") +
   xlab("Number of Individuals") + 
   ylab("Count") + 
   theme(title = element_text(size = s), text = element_text(size = s))
-ggsave("blue_hist.png", plot = blue_hist, width = 6, height = 4)
+ggsave("plots/blue_hist.png", plot = blue_hist, width = 6, height = 4)
 # data_rf$`No Woody Debris`
 
 ranges_rf <- as.data.frame(matrix(NA, nrow = ncol(data_rf), ncol = 2))
