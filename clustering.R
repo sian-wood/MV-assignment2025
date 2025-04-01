@@ -16,8 +16,8 @@ library(corrplot)
 ################################################################################
 # Read in data
 ################################################################################
-data_rf  <- read_excel("topic_ideas\\ZivaHub_RawData.xlsx", sheet = "Proportional Converted to %")
-data_loc <- read_excel("topic_ideas\\ZivaHub_RawData.xlsx", sheet = "Site Locations")
+data_rf  <- read_excel("data\\ZivaHub_RawData.xlsx", sheet = "Proportional Converted to %")
+data_loc <- read_excel("data\\ZivaHub_RawData.xlsx", sheet = "Site Locations")
 # Neaten dataframe
 colnames(data_rf) <- data_rf[1,]
 colnames(data_loc) <- c("Survey", "Site", "Latitude", "Longitude", "Elevation")
