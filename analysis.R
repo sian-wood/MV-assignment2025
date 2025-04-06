@@ -30,54 +30,27 @@ data_rf <- data_rf[,c(3, 1, 2, 4:ncol(data_rf))]
 # Update column names so easier to work with 
 colnames(data_rf)[c(12,15)] <- c("Total_Iron", "Inorg_Nitrogen")
 
-# Split into test and training 
-set.seed(64)
-train_rows = sample(1:nrow(data_rf), size = ceiling(0.75*nrow(data_rf)))
-train = data_rf[train_rows,]
-test = data_rf[-train_rows,]
-
-# Ensure that at least one site with presence of each species occurs in each set
-# Heuningnes Redfin
-sum(train$`Heuningnes Redfin`>0)
-sum(test$`Heuningnes Redfin`>0)
-# Cape Kurper
-sum(train$`Cape Kurper`>0)
-sum(test$`Cape Kurper`>0)
-# Cape Galaxias
-sum(train$`Cape Galaxias`>0)
-sum(test$`Cape Galaxias`>0)
-# Spotted Bass
-sum(train$`Spotted Bass`>0)
-sum(test$`Spotted Bass`>0)
-# Bluegill Sunfish
-sum(train$`Bluegill Sunfish`>0)
-sum(test$`Bluegill Sunfish`>0)
-# Common Carp
-sum(train$`Common Carp`>0)
-sum(test$`Common Carp`>0)
-
-# Only Common Carp must be removed
+# Common Carp must be removed
 # Remove binary vars while I'm at it
-cc_col = which(names(train) == "Common Carp")
-train  = train[,-c(cc_col, cc_col+1, cc_col+2)]
-test   = test[,-c(cc_col, cc_col+1, cc_col+2)]
+cc_col = which(names(data_rf) == "Common Carp")
+data_rf  = data_rf[,-c(cc_col, cc_col+1, cc_col+2)]
 
 ################################################################################
 # Correlations
 ################################################################################
-corrplot(cor(train[,2:47]), method = "color", type = "upper", 
+corrplot(cor(data_rf[,2:47]), method = "color", type = "upper", 
          diag = FALSE,  
          tl.col = "black", tl.srt = 35, addCoef.col = "black",
          tl.cex = 0.4, number.cex = 0.6)
 #' Spotted bass may be well predicted by undercut riverbanks
 #' Cape galaxias have a number of relatively strong pos and neg correlations, 
 #' particularly with water quality vars
-corrplot(cor(train[,2:47]), method = "color", type = "upper", 
+corrplot(cor(data_rf[,2:47]), method = "color", type = "upper", 
          diag = FALSE,  
          tl.col = "black", tl.srt = 45, 
          tl.cex = 1)
 
-corrplot(cor(train[,43:47]), method = "color", type = "upper", 
+corrplot(cor(data_rf[,43:47]), method = "color", type = "upper", 
          diag = FALSE,  
          tl.col = "black", tl.srt = 45, 
          tl.cex = 1, , addCoef.col = "black")
@@ -86,106 +59,109 @@ corrplot(cor(train[,43:47]), method = "color", type = "upper",
 # install.packages("usdm")
 library(usdm)
 # remove highly correlated variables
-vif_res = vifstep(train[,2:42])
-remove = which(colnames(train) %in% vif_res@excluded)
-train_nocor = train[,-(remove)]
-# ncol(train_nocor)
-corrplot(cor(train_nocor[,2:33]), method = "color", type = "upper", 
+vif_res = vifstep(data_rf[,2:42])
+remove = which(colnames(data_rf) %in% vif_res@excluded)
+# subset of variables without extreme correlations
+colnames(data_rf)
+data_rf_nocor = data_rf[,-(remove)]
+# ncol(data_rf_nocor)
+corrplot(cor(data_rf_nocor[,2:33]), method = "color", type = "upper", 
          diag = FALSE,  
          tl.col = "black", tl.srt = 45, 
-         tl.cex = 1.3)
+         tl.cex = 1)
+max(abs((cor(data_rf_nocor[,2:33])<1)*cor(data_rf_nocor[,2:33])))
 
 ################################################################################
 # Nonlinear MDS
 ################################################################################
-dismat <- dist(train[,2:42], 
-               method = "euclidean", 
-               diag = TRUE, 
-               upper = TRUE)
-
-coords <- metaMDS(dismat, k = 2) |> scores()
-coords <- cbind(Sites = train$Sites, as.data.frame(coords))
-ggplot(coords, aes(x = NMDS1, y = NMDS2, label=Sites)) +
-  geom_point() + 
-  geom_text(hjust = -0.25)
-
-hier_clust <- dismat |> 
-  agnes(diss = TRUE, method = "average")
-
-# Plot
-pltree(hier_clust, main = "Dendrogram") 
-
-# Assuming obs 43 has been removed
-num_clusts = 2:(nrow(train)-1)
-# Silhouette widths
-out <- sapply(num_clusts, 
-              FUN = function(k){mean(silhouette(cutree(hier_clust, 
-                                                       k = k), 
-                                                dismat)[,3])})
-sc <- max(out) # Best silhouette width
-best_k <- num_clusts[which(out == sc)] # Associated k
-
-# Cut tree to have 2 clusters 
-hier_cut2 <- cutree(hier_clust, k = 2)
-
-# Plot in 2D
-hier_clust_data <- cbind(clust = as.factor(hier_cut2), as.data.frame(coords))
-
-ggplot(hier_clust_data, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
-  geom_point(aes(col = clust)) + 
-  geom_text(hjust = -0.25,aes(col = clust))
-
-# colour by presence of fish at a site
-fish_binary = apply(train[,43:47], MARGIN = c(1, 2), FUN = function(x){if(x>0) 
-  return(as.factor(1)) 
-  else{return(as.factor(0))}})
-coords_fish = cbind(coords, fish_binary)
-
-# Heuningnes Redfin
-ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
-  geom_point(aes(col = `Heuningnes Redfin`)) + 
-  geom_text(hjust = -0.25, aes(col = `Heuningnes Redfin`))
-
-# Cape Kurper
-ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
-  geom_point(aes(col = `Cape Kurper`)) + 
-  geom_text(hjust = -0.25, aes(col = `Cape Kurper`))
-
-# Cape Galaxias
-ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
-  geom_point(aes(col = `Cape Galaxias`)) + 
-  geom_text(hjust = -0.25, aes(col = `Cape Galaxias`))
-# cluster well
-
-# Spotted Bass
-ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
-  geom_point(aes(col = `Spotted Bass`)) + 
-  geom_text(hjust = -0.25, aes(col = `Spotted Bass`))
-# low NMDS2, high NMDS1
-
-# Bluegill Sunfish
-ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
-  geom_point(aes(col = `Bluegill Sunfish`)) + 
-  geom_text(hjust = -0.25, aes(col = `Bluegill Sunfish`))
-# low NMDS2, high NMDS1
+# dismat <- dist(data_rf[,2:42], 
+#                method = "euclidean", 
+#                diag = TRUE, 
+#                upper = TRUE)
+# 
+# coords <- metaMDS(dismat, k = 2) |> scores()
+# coords <- cbind(Sites = data_rf$Sites, as.data.frame(coords))
+# ggplot(coords, aes(x = NMDS1, y = NMDS2, label=Sites)) +
+#   geom_point() + 
+#   geom_text(hjust = -0.25)
+# 
+# hier_clust <- dismat |> 
+#   agnes(diss = TRUE, method = "average")
+# 
+# # Plot
+# pltree(hier_clust, main = "Dendrogram") 
+# 
+# # Assuming obs 43 has been removed
+# num_clusts = 2:(nrow(data_rf)-1)
+# # Silhouette widths
+# out <- sapply(num_clusts, 
+#               FUN = function(k){mean(silhouette(cutree(hier_clust, 
+#                                                        k = k), 
+#                                                 dismat)[,3])})
+# sc <- max(out) # Best silhouette width
+# best_k <- num_clusts[which(out == sc)] # Associated k
+# 
+# # Cut tree to have 2 clusters 
+# hier_cut2 <- cutree(hier_clust, k = 2)
+# 
+# # Plot in 2D
+# hier_clust_data <- cbind(clust = as.factor(hier_cut2), as.data.frame(coords))
+# 
+# ggplot(hier_clust_data, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
+#   geom_point(aes(col = clust)) + 
+#   geom_text(hjust = -0.25,aes(col = clust))
+# 
+# # colour by presence of fish at a site
+# fish_binary = apply(data_rf[,43:47], MARGIN = c(1, 2), FUN = function(x){if(x>0) 
+#   return(as.factor(1)) 
+#   else{return(as.factor(0))}})
+# coords_fish = cbind(coords, fish_binary)
+# 
+# # Heuningnes Redfin
+# ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
+#   geom_point(aes(col = `Heuningnes Redfin`)) + 
+#   geom_text(hjust = -0.25, aes(col = `Heuningnes Redfin`))
+# 
+# # Cape Kurper
+# ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
+#   geom_point(aes(col = `Cape Kurper`)) + 
+#   geom_text(hjust = -0.25, aes(col = `Cape Kurper`))
+# 
+# # Cape Galaxias
+# ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
+#   geom_point(aes(col = `Cape Galaxias`)) + 
+#   geom_text(hjust = -0.25, aes(col = `Cape Galaxias`))
+# # cluster well
+# 
+# # Spotted Bass
+# ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
+#   geom_point(aes(col = `Spotted Bass`)) + 
+#   geom_text(hjust = -0.25, aes(col = `Spotted Bass`))
+# # low NMDS2, high NMDS1
+# 
+# # Bluegill Sunfish
+# ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
+#   geom_point(aes(col = `Bluegill Sunfish`)) + 
+#   geom_text(hjust = -0.25, aes(col = `Bluegill Sunfish`))
+# # low NMDS2, high NMDS1
 
 ################################################################################
 # Linear PCA
 ################################################################################
-pca = prcomp(train[2:42], retx = TRUE, center = TRUE, scale = TRUE)
+pca = prcomp(data_rf[,2:42], retx = TRUE, center = TRUE, scale = TRUE)
 # ?prcomp
 
-# Choose 13
-sum((pca$sdev^2)[1:sum(pca$sdev^2>1)])/sum(pca$sdev^2) # 86%
+# Choose 12
+sum((pca$sdev^2)[1:sum(pca$sdev^2>1)])/sum(pca$sdev^2) # 79%
 
 plot(pca$sdev^2, type = 'l', lwd = 1.5)
-abline(v = 7, col = "red", lty = 2, lwd = 2)
-abline(v = 13, col = "red", lty = 2, lwd = 2)
+abline(v = 8, col = "red", lty = 2, lwd = 2)
+abline(v = 12, col = "red", lty = 2, lwd = 2)
 # Choose 6 
-sum((pca$sdev^2)[1:6])/sum(pca$sdev^2) # 61%
+sum((pca$sdev^2)[1:8])/sum(pca$sdev^2) # 66.5%
 
-# 70% - 8 PCs
-sum((pca$sdev^2)[1:8])/sum(pca$sdev^2)
+# 70% - 9 PCs
+sum((pca$sdev^2)[1:9])/sum(pca$sdev^2)
 
 # Broken stick model
 p = length(pca$sdev)
@@ -198,10 +174,11 @@ for(k in 1:p){
   broken_stick[k] = val
 }
 # How many eigenvalues exceed their broken stick equivalent?
-sum(broken_stick<(pca$sdev^2)) # 6 - 61%
+sum(broken_stick<(pca$sdev^2)) # 8 - 66.5%
+xtable(as.data.frame(as.matrix(data_rf[2:42])%*%pca$rotation[,1:8]))
 
 # Plotting just the first 2 (31%)
-coords <- cbind(Sites = train$Sites, as.data.frame(as.matrix(train[2:42])%*%pca$rotation[,1:13]))
+coords <- cbind(Sites = data_rf$Sites, as.data.frame(as.matrix(data_rf[2:42])%*%pca$rotation[,1:13]))
 ggplot(coords, aes(x = PC1, y = PC2, label=Sites)) +
   geom_point() + 
   geom_text(hjust = -0.25)
@@ -246,7 +223,7 @@ ggplot(coords_fish, aes(x = PC1, y = PC2, label=Sites)) +
   geom_text(hjust = -0.25, aes(col = `Bluegill Sunfish`))
 # low PC1, close to 0 PC2
 
-# PCAbiplot(train[2:40], scaled.mat=T, samples=list(label=T))
+# PCAbiplot(data_rf[2:40], scaled.mat=T, samples=list(label=T))
 #' Not much is obvious with just the 2 PCs
 #' This makes sense, since we are losing so much information from the data
 #' Need at least 6PCs - broken stick
@@ -254,7 +231,7 @@ ggplot(coords_fish, aes(x = PC1, y = PC2, label=Sites)) +
 #' If this doesn't perform well, try 13
 
 # Interpret first 6 PCs
-pcs <- as.data.frame(pca$rotation[,1:6])
+pcs <- as.data.frame(pca$rotation[,1:8])
 cutoff <- 0.1
 pc <- 5
 
@@ -278,164 +255,454 @@ neg <- which(pcs[,pc] <= quantile(pcs[,pc], probs = 0.3) & pcs[,pc] > quantile(p
 rownames(pcs)[neg]
 (pcs)[neg,pc]
 
-
 ################################################################################
-# mvabund first attempt
+# Kernel PCA
+################################################################################
+library(kernlab)
+mat_rf  = as.matrix(data_rf[2:42])
+kpca_rf = kpca(x = mat_rf, kernel = "rbfdot", kpar = list(sigma = 0.0001),
+     features = 15, th = 1e-4)
+# pcv(kpca_rf)
+eig(kpca_rf)
+# As sigma gets smaller ie. closer to linear pca, eig get larger
+
+# Laplace
+kpca_rf = kpca(x = mat_rf, kernel = "laplacedot", kpar = list(sigma = 0.019),
+               features = 15, th = 1e-4)
+# pcv(kpca_rf)
+eig(kpca_rf)
+
+# Spline
+# kpca_rf = kpca(x = mat_rf, kernel = "splinedot",
+#                features = 15, th = 1e-4)
+# # pcv(kpca_rf)
+# eig(kpca_rf)
+################################################################################
+# Model building
 ################################################################################
 library(mvabund)
-# ?meanvar.plot
-train_mvabund = mvabund(train)
+# Create mvabund objects
+# data_rf_mvabund = mvabund(data_rf[,43:47])
 pcscores_mvabund = mvabund(coords)
-?meanvar.plot
-meanvar.plot(mvabund(train[,2:47]), 
+# Investigate mean-variance relationship
+meanvar.plot(mvabund(data_rf[,2:47]), 
              cex = 1, 
              pch = 19, 
              cex.axis = 0.9, 
              ylab = "Variance", 
              xlab = "Mean") # strong mean-variance relationship
-# i.e. high means = high variances
 
-# response is count data, so poisson or neg binomial
-# plot(train_mvabund[,43:47] ~ as.factor(train$`Undercut Bank`), cex.axis = 0.8, cex = 0.8)
-# mod1 <- manyglm(train_mvabund[,43:47] ~ train_mvabund[,2:42], family = "poisson")
-# plot(mod1) # doesn't look random
+# Fix names
+colnames(data_rf) = gsub("-", ".", gsub(" ", ".", colnames(data_rf)))
+colnames(data_rf)[35:42] = as.data.frame(strsplit(colnames(data_rf)[35:42], split = "th"))[1,]
 
-# mod2 <- manyglm(train_mvabund[,43:47] ~ train_mvabund[,2:42], family = "negative_binomial")
-# plot(mod2) # still not random
+# FULL MODEL
+set.seed(1)
+colnames(data_rf)
+mod1 <- manyglm(formula = as.mvabund(data_rf[,43:47]) ~ Latitude + 
+                  Longitude + 
+                  pH + 
+                  EC +
+                  DO + 
+                  Temp + 
+                  Ammonia + 
+                  Phosphorous + 
+                  Nitrite + 
+                  Nitrate + 
+                  Total_Iron + 
+                  Phosphonate + 
+                  TDS + 
+                  Inorg_Nitrogen +
+                  Elevation + 
+                  Flow + 
+                  Slope + 
+                  Silt.Sand.Substrate + 
+                  Gravel.Substrate + 
+                  Cobble.Substrate +
+                  Boulder.Substrate + 
+                  Bedrock.Substrate + 
+                  Woody.Debris + 
+                  No.Woody.Debris + 
+                  Undercut.Bank + 
+                  No.Undercut.Bank + 
+                  No.Macrophytes + 
+                  Scarce.Macrophytes + 
+                  Moderate.Macrophytes + 
+                  Abundant.Macrophytes + 
+                  Open.Canopy + 
+                  Partial.Canopy + 
+                  Closed.Canopy + 
+                  Shallow.Water.Dep + 
+                  Moderate.Water.Dep + 
+                  Deep.Water.Dep + 
+                  Very.Deep.Water.Dep + 
+                  Narrow.River.Wid + 
+                  Moderate.River.Wid + 
+                  Wide.River.Wid + 
+                  Very.Wide.Wid, 
+                data = data_rf,
+                cor.type="shrink",
+                family = "negative_binomial")
+mod1_plot = plot(mod1, subtitle = NULL) #Yes
+# ggsave("plots/mod1.png", plot = mod4_plot, width = 6, height = 4)
+# Test for treatment effects
+# an_mod1_unadj = anova(mod1, p.uni = "unadjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
+# saveRDS(an_mod1_unadj, "an_mod1_unadj.RDS")
+an_mod1_unadj = readRDS("an_mod1_unadj.RDS")
+# an_mod1_adj   = anova(mod1, p.uni = "adjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
+# saveRDS(an_mod1_adj, "an_mod1_adj.RDS")
+an_mod1_adj = readRDS("an_mod1_adj.RDS")
+# summ_mod1 = summary(mod1)
+# saveRDS(summ_mod1, "summ_mod1.RDS")
+summ_mod1 = readRDS("summ_mod1.RDS")
 
-# Should we use PCs?
-# mod3 <- manyglm(train_mvabund[,43:47] ~ pcscores_mvabund[,2:7], family = "poisson")
-# plot(mod3) #Nope
+# xtable(an_mod1$table)
+# xtable(an_mod1$uni.p)
 
+# VIF ADJUSTED ONLY
+set.seed(1)
+colnames(data_rf_nocor) = colnames(data_rf)[-(remove)]
+
+mod2 <- manyglm(formula = as.mvabund(data_rf[,43:47]) ~ Latitude + 
+                  pH + 
+                  EC +
+                  DO + 
+                  Temp + 
+                  Ammonia + 
+                  Phosphorous + 
+                  Nitrite + 
+                  Nitrate + 
+                  Total_Iron + 
+                  Phosphonate + 
+                  TDS + 
+                  Slope + 
+                  Gravel.Substrate + 
+                  Cobble.Substrate +
+                  Boulder.Substrate + 
+                  Bedrock.Substrate +
+                  No.Woody.Debris + 
+                  Undercut.Bank + 
+                  No.Undercut.Bank + 
+                  Scarce.Macrophytes + 
+                  Moderate.Macrophytes + 
+                  Abundant.Macrophytes + 
+                  Partial.Canopy + 
+                  Closed.Canopy + 
+                  Moderate.Water.Dep + 
+                  Deep.Water.Dep + 
+                  Very.Deep.Water.Dep + 
+                  Narrow.River.Wid + 
+                  Moderate.River.Wid +
+                  Very.Wide.Wid, 
+                family = "negative_binomial", 
+                data = data_rf,
+                cor.type="shrink")
+
+mod2_plot = plot(mod2, subtitle = NULL) #Yes
+# ggsave("plots/mod1.png", plot = mod4_plot, width = 6, height = 4)
+# Test for treatment effects
+# an_mod2_unadj = anova(mod2, p.uni = "unadjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
+# saveRDS(an_mod2_unadj, "an_mod2_unadj.RDS")
+an_mod2_unadj = readRDS("an_mod2_unadj.RDS")
+# an_mod2_adj   = anova(mod2, p.uni = "adjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
+# saveRDS(an_mod2_adj, "an_mod2_adj.RDS")
+an_mod2_adj = readRDS("an_mod2_adj.RDS")
+# summ_mod2 = summary(mod2)
+# saveRDS(summ_mod2, "summ_mod2.RDS")
+summ_mod2 = readRDS("summ_mod2.RDS")
+
+# xtable(an_mod1$table)
+# xtable(an_mod1$uni.p)
+
+# BEST SUBSET REGRESSION
+best_bic = rep(Inf, 41) # where index indicates number of expl variables in model
+best_comb = matrix(0, nrow = 41, ncol = 41)
+expl_vars = data_rf[,2:42]
+for(i in 41:1){
+  print(i)
+  # build model with every combination of i variables
+  # i.e. when i = 41, we will be building a full model
+  # when i = 1, we will be building a model with 1 expl variable
+  mods = combn(1:41, i)
+  # build each model
+  for(j in 1:ncol(mods)){
+    current_mod = manyglm(as.mvabund(data_rf[,43:47]) ~ as.matrix(expl_vars[,mods[,j]]), 
+                          family = "negative_binomial",
+                          cor.type="shrink")
+    current_bic = mean(BIC(current_mod))
+    if(current_bic<best_bic[i]){
+      best_bic[i] = current_bic
+      best_comb[1:i,i] = mods[,j]
+    }
+  }
+}
+# saveRDS(best_bic, "data/best_bic_36_41.RDS")
+# saveRDS(best_comb, "data/best_comb_36_41.RDS")
+best_bic = readRDS("data/best_bic_36_41.RDS")
+best_comb = readRDS("data/best_comb_36_41.RDS")
+
+setdiff(best_comb[,41], best_comb[,36])
+#' 19 
+#' 22 and 32
+#' 19 30 and 33
+#' 20 21 28 and 33
+#' 19 21 27 29 and 34
+colnames(data_rf)
+
+set.seed(1)
+mod3 <- manyglm(as.mvabund(data_rf[,43:47]) ~ , 
+                family = "negative_binomial", 
+                theta.method = "PHI", 
+                maxiter2 = 10)
+mod3_plot = plot(mod3, subtitle = NULL) #Yes
+# ggsave("plots/mod3.png", plot = mod3_plot, width = 6, height = 4)
+# Test for treatment effects
+# an_mod3_unadj = anova(mod3, p.uni = "unadjusted", resamp = "montecarlo")
+# saveRDS(an_mod3_unadj, "an_mod3_unadj.RDS")
+an_mod3_unadj = readRDS("an_mod3_unadj.RDS")
+# an_mod3_adj   = anova(mod3, p.uni = "adjusted", resamp = "montecarlo")
+# saveRDS(an_mod3_adj, "an_mod3_adj.RDS")
+an_mod3_adj = readRDS("an_mod3_adj.RDS")
+# summ_mod3 = summary(mod3)
+# saveRDS(summ_mod3, "summ_mod3.RDS")
+summ_mod3 = readRDS("summ_mod3.RDS")
+
+# xtable(an_mod3$table)
+# xtable(an_mod3$uni.p)
+
+# BACKWARDS SELECTION
+best_bic = rep(Inf, 41) # where index indicates number of expl variables in model
+best_rmv = rep(NA, 41)
+for(i in 41:1){
+  print(i)
+  # remove variables one at a time, maximising BIC 
+  # mods = combn(remaining, i)
+  # build each model
+  vars = setdiff(1:41, best_rmv)
+  mods = combn(vars, length(vars)-1)
+  for(j in 1:ncol(mods)){
+    # remove variable j
+    current_mod = manyglm(as.mvabund(data_rf[,43:47]) ~ as.matrix(expl_vars[,mods[,j]]), 
+                          family = "negative_binomial",
+                          cor.type="shrink")
+    current_bic = mean(BIC(current_mod))
+    if(current_bic<best_bic[i]){
+      best_bic[i] = current_bic
+      best_rmv[i] = setdiff(vars, mods[,j])
+    }
+  }
+}
+# saveRDS(best_bic, "data/best_bic_back.RDS")
+# saveRDS(best_rmv, "data/best_rmv_back.RDS")
+best_bic_back = readRDS("data/best_bic_back.RDS")
+best_rmv_back = readRDS("data/best_rmv_back.RDS")
+plot(rev(best_bic_back), xlab = "Number Vars Removed", 
+     ylab = "BIC", 
+     type = "l", 
+     cex.lab = 2, 
+     cex.axis = 1.5, 
+     lwd = 2, 
+     xaxt = "n")
+axis(1, at = seq(0, 40, by = 5), labels = seq(0, 40, by = 5), cex.axis = 1.5)
+
+# abline(v = 42-28)
+# abline(v = 42-23)
+# abline(v = 42-15)
+# abline(v = 42-10)
+# abline(v = 42-5)
+# setdiff(1:41, best_rmv)
+
+#' 19 
+#' 22 and 32
+#' 19 30 and 33
+#' 20 21 28 and 33
+#' 19 21 27 29 and 34
+# colnames(data_rf)
+
+# set.seed(1)
+# mod3 <- manyglm(data_rf_mvabund[,43:47] ~ as.matrix(expl_vars[,c(3, 15, 2, 31, 40, 39, 12)]), 
+#                 family = "negative_binomial", 
+#                 theta.method = "PHI", 
+#                 maxiter2 = 10)
+# mean(BIC(mod3))
+# mod3_plot = plot(mod3, subtitle = NULL) #Yes
+# ggsave("plots/mod3.png", plot = mod3_plot, width = 6, height = 4)
+# Test for treatment effects
+# an_mod3_unadj = anova(mod3, p.uni = "unadjusted", resamp = "montecarlo")
+# saveRDS(an_mod3_unadj, "an_mod3_unadj.RDS")
+an_mod3_unadj = readRDS("an_mod3_unadj.RDS")
+# an_mod3_adj   = anova(mod3, p.uni = "adjusted", resamp = "montecarlo")
+# saveRDS(an_mod3_adj, "an_mod3_adj.RDS")
+an_mod3_adj = readRDS("an_mod3_adj.RDS")
+# summ_mod3 = summary(mod3)
+# saveRDS(summ_mod3, "summ_mod3.RDS")
+summ_mod3 = readRDS("summ_mod3.RDS")
+
+mod3.5 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
+                      Elevation +
+                      Longitude +
+                      Open.Canopy + 
+                      Wide.River.Wid + 
+                      Moderate.River.Wid +
+                      Phosphonate, 
+                    data = data_rf[,2:42],
+                    family = "negative_binomial",
+                  cor.type="shrink")
+plot(mod3.5, subtitle = NULL) 
+
+mod3.10 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
+                       Elevation +
+                       Longitude +
+                       Open.Canopy + 
+                       Wide.River.Wid + 
+                       Moderate.River.Wid +
+                       Phosphonate +
+                       Very.Wide.Wid + 
+                       Narrow.River.Wid + 
+                       EC, 
+                     data = data_rf[,2:42],
+                     family = "negative_binomial",
+                   cor.type="shrink")
+plot(mod3.10, subtitle = NULL) 
+
+mod3.15 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
+                       Elevation +
+                       Longitude +
+                       Open.Canopy + 
+                       Wide.River.Wid + 
+                       Moderate.River.Wid +
+                       Phosphonate +
+                       Very.Wide.Wid + 
+                       Narrow.River.Wid + 
+                       EC +
+                       Gravel.Substrate + 
+                       Total_Iron + 
+                       No.Macrophytes + 
+                       Scarce.Macrophytes + 
+                       Inorg_Nitrogen, 
+                     data = data_rf[,2:42],
+                     family = "negative_binomial",
+                   cor.type="shrink")
+plot(mod3.15, subtitle = NULL) 
+
+mod3.23 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
+                       Elevation +
+                       Longitude +
+                       Open.Canopy + 
+                       Wide.River.Wid + 
+                       Moderate.River.Wid +
+                       Phosphonate +
+                       Very.Wide.Wid + 
+                       Narrow.River.Wid + 
+                       EC +
+                       Gravel.Substrate + 
+                       Total_Iron + 
+                       No.Macrophytes + 
+                       Scarce.Macrophytes + 
+                       Inorg_Nitrogen + 
+                       Nitrite + 
+                       DO + 
+                       Flow + 
+                       Silt.Sand.Substrate + 
+                       Closed.Canopy + 
+                       Slope + 
+                       Bedrock.Substrate + 
+                       Nitrate, 
+                     data = data_rf[,2:42],
+                     family = "negative_binomial",
+                   cor.type="shrink")
+plot(mod3.23, subtitle = NULL) 
+
+mod3.28 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
+                       Elevation +
+                       Longitude +
+                       Open.Canopy + 
+                       Wide.River.Wid + 
+                       Moderate.River.Wid +
+                       Phosphonate +
+                       Very.Wide.Wid + 
+                       Narrow.River.Wid + 
+                       EC +
+                       Gravel.Substrate + 
+                       Total_Iron + 
+                       No.Macrophytes + 
+                       Scarce.Macrophytes + 
+                       Inorg_Nitrogen + 
+                       Nitrite + 
+                       DO + 
+                       Flow + 
+                       Silt.Sand.Substrate + 
+                       Closed.Canopy + 
+                       Slope + 
+                       Bedrock.Substrate + 
+                       Nitrate + 
+                       Woody.Debris + 
+                       Temp + 
+                       Shallow.Water.Dep + 
+                       Abundant.Macrophytes + 
+                       Undercut.Bank, 
+                     data = data_rf[,2:42],
+                     family = "negative_binomial",
+                   cor.type="shrink")
+plot(mod3.28, subtitle = NULL) 
+
+
+# colnames(expl_vars[best_rmv_back[2:41]])
+# PRINCIPAL COMPONENTS
 #' for multivariate abundance data it has been shown that the negative binomial 
 #' distribution (family="negative.binomial") is usually a better choice 
 #' (Warton 2005)
-set.seed(12338)
-mod4 <- manyglm(train_mvabund[,43:47] ~ coords$PC1 + 
+set.seed(1)
+
+mod4 <- manyglm(as.mvabund(data_rf[,43:47]) ~ coords$PC1 + 
                   coords$PC2 + 
                   coords$PC3 + 
                   coords$PC4 + 
                   coords$PC5 + 
-                  coords$PC6, 
-                family = "negative_binomial", 
-                theta.method = "PHI", 
-                maxiter2 = 10)
+                  coords$PC6 +
+                  coords$PC7 +
+                  coords$PC8, 
+                family = "negative_binomial",
+                cor.type="shrink")
+
 mod4_plot = plot(mod4, subtitle = NULL) #Yes
 # ggsave("plots/mod4.png", plot = mod4_plot, width = 6, height = 4)
 # Test for treatment effects
-# anova(mod4) # PCs definitely explain some of the var in the data
-# anova(mod4, p.uni = "adjusted")
-an_mod4 = anova(mod4, p.uni = "adjusted", resamp = "montecarlo")
-xtable(an_mod4$table)
-xtable(an_mod4$uni.p)
-summary(mod4)
+# an_mod4_unadj = anova(mod4, p.uni = "unadjusted", resamp = "montecarlo")
+# saveRDS(an_mod4_unadj, "an_mod4_unadj.RDS")
+an_mod4_unadj = readRDS("an_mod4_unadj.RDS")
+# an_mod4_adj   = anova(mod4, p.uni = "adjusted", resamp = "montecarlo")
+# saveRDS(an_mod4_adj, "an_mod4_adj.RDS")
+an_mod4_adj = readRDS("an_mod4_adj.RDS")
+# summ_mod4 = summary(mod4)
+# saveRDS(summ_mod4, "summ_mod4.RDS")
+summ_mod4 = readRDS("summ_mod4.RDS")
+
+# xtable(an_mod4$table)
+# xtable(an_mod4$uni.p)
+
+# NONLINEAR METHOD
+set.seed(1)
+mod5 <- manyglm(data_rf_mvabund[,43:47] ~ , 
+                family = "negative_binomial",
+                cor.type="shrink")
+mod5_plot = plot(mod5, subtitle = NULL) #Yes
+# ggsave("plots/mod5.png", plot = mod5_plot, width = 6, height = 4)
+# Test for treatment effects
+# an_mod5_unadj = anova(mod5, p.uni = "unadjusted", resamp = "montecarlo")
+# saveRDS(an_mod5_unadj, "an_mod5_unadj.RDS")
+an_mod5_unadj = readRDS("an_mod5_unadj.RDS")
+# an_mod5_adj   = anova(mod5, p.uni = "adjusted", resamp = "montecarlo")
+# saveRDS(an_mod5_adj, "an_mod5_adj.RDS")
+an_mod5_adj = readRDS("an_mod5_adj.RDS")
+# summ_mod5 = summary(mod5)
+# saveRDS(summ_mod5, "summ_mod5.RDS")
+summ_mod5 = readRDS("summ_mod5.RDS")
+
+# xtable(an_mod5$table)
+# xtable(an_mod5$uni.p)
 
 
-# What about mvabund using raw expl vars but without highly correlated vars?
-train_nocor_mvabund <- as.mvabund(train_nocor)
-# DOES IT MAKE ANY SENSE TO FIT A POISSON
-# mod5 <- manyglm(train_mvabund[,43:47] ~ train_nocor_mvabund[,2:28],
-#                 family = "poisson")
-# plot(mod5) # Yes
-# anova(mod5) # Vars definitely explain some of the var in the data
-# anova(mod5, p.uni = "adjusted")
-# summary(mod5) # MUCH BETTER!
-set.seed(64)
-mod6 <- manyglm(formula = train_mvabund[,43:47] ~ train_nocor_mvabund[,2:28], 
-                family = "negative_binomial")
-mod6_plot = plot(mod6)
-
-library(tidyr)
-?pivot_longer
-fitted.values = pivot_longer(as.data.frame(mod6$fitted.values |> apply(MARGIN = 2, FUN = scale)), cols = 1:5)
-colnames(fitted.values) = c("species", "fitted")
-PIT.residuals = pivot_longer(as.data.frame(mod6$PIT.residuals |> apply(MARGIN = 2, FUN = scale)), cols = 1:5)
-mod6_df = cbind(fitted.values, resids = PIT.residuals$value)
-
-ggplot(mod6_df, aes(x = fitted, y = resids)) + 
-  geom_point(aes())
-
-# ggsave("plots/mod6.png", plot = mod6_plot, width = 6, height = 4)
-anova(mod6) # Vars definitely explain some of the var in the data
-anova(mod6, p.uni = "adjusted", resamp = "montecarlo")
-summary(mod6) # Nope
-# Can I set this not to assume no correlation?
-
-#################################################
-set.seed(64)
-mod6 <- manyglm(formula = train_mvabund[,43:47] ~ train_nocor$Longitude + 
-                  train_nocor$pH + 
-                  train_nocor$DO + 
-                  train_nocor$Temp + 
-                  train_nocor$Phosphorous + 
-                  train_nocor$Nitrite + 
-                  train_nocor$Nitrate + 
-                  train_nocor$Total_Iron + 
-                  train_nocor$Phosphonate + 
-                  train_nocor$TDS + 
-                  train_nocor$Slope + 
-                  train_nocor$`Gravel Substrate` + 
-                  train_nocor$`Boulder Substrate` + 
-                  train_nocor$`Bedrock Substrate` + 
-                  train_nocor$`No Woody Debris` + 
-                  train_nocor$`Undercut Bank` + 
-                  train_nocor$`No Undercut Bank` + 
-                  train_nocor$`Scarce Macrophytes` + 
-                  train_nocor$`Moderate Macrophytes` + 
-                  train_nocor$`Abundant Macrophytes` + 
-                  train_nocor$`Partial Canopy` + 
-                  train_nocor$`Closed Canopy` + 
-                  train_nocor$`Moderate Water Depth (51-100)` + 
-                  train_nocor$`Deep Water Depth (100 - 180)` + 
-                  train_nocor$`Very Deep Water Depth (<180)` + 
-                  train_nocor$`Moderate River Width (3 - 6)` + 
-                  train_nocor$`Very Wide Width (<10)`, 
-                family = "negative_binomial")
-# mod6_plot = plot(mod6)
-# ggsave("plots/mod6.png", plot = mod6_plot, width = 6, height = 4)
-# anova(mod6) # Vars definitely explain some of the var in the data
-an_mod6 = anova(mod6, p.uni = "adjusted", cor.type = "shrink", test = "wald")
-sum_mod6 = summary(mod6) # Nope
-# Can I set this not to assume no correlation?
-?anova.manyglm
-an_mod6$uni.p
-xtable(an_mod6$uni.p)
-#' mod5 most promising by a long shot
-#' mod4 comes next
-#' all others do a poor job
-#' 
-#' 
-anova.manyglm(mod6)
-?coef
-xtable(coef(mod4))
-
-set.seed(64)
-mod7 <- manyglm(formula = train_mvabund[,43:47] ~ train_nocor$Longitude + 
-                  train_nocor$pH + 
-                  train_nocor$Temp + 
-                  train_nocor$Phosphorous + 
-                  train_nocor$`Deep Water Depth (100 - 180)` + 
-                  train_nocor$`Very Deep Water Depth (<180)` + 
-                  train_nocor$`Moderate River Width (3 - 6)` + 
-                  train_nocor$`Very Wide Width (<10)`, 
-                family = "negative_binomial")
-mod7_plot = plot(mod7)
-# ggsave("plots/mod6.png", plot = mod6_plot, width = 6, height = 4)
-# anova(mod6) # Vars definitely explain some of the var in the data
-an_mod7 = anova(mod7, p.uni = "adjusted", cor.type = "shrink", test = "wald")
-AIC(mod7)
-AIC(mod6)
-sum_mod7 = summary(mod6) # Nope
-# Can I set this not to assume no correlation?
-an_mod7$uni.p
-xtable(an_mod7$uni.p)
-#' mod5 most promising by a long shot
-#' mod4 comes next
-#' all others do a poor job
-#' 
-#' 
-anova.manyglm(mod7)
-coef(mod7)
 ################################################################################
 # Map
 ################################################################################
@@ -457,34 +724,398 @@ leaflet() %>%
              labelOptions = c(permanent = FALSE))
 ?addMarkers
 summary(long_lat)
-################################################################################
-# Non linear methods
-################################################################################
-
-
 
 ################################################################################
-# Test Set
+# GLLVM
 ################################################################################
+library(gllvm)
+data_rf_new = data_rf
+colnames(data_rf)[34]
 
-?predict
-predict(object = mod6, type = "response")
-predict(mod6, type = "response", newdata = test[,-c(1, remove, 43:47)])
+gllvm(y = as.matrix(data_rf_new[,43:47]), X = scale(as.matrix(data_rf_new[,2:42])), family = "negative.binomial")
+
+det(var(data_rf_new[,2:19]))
+################################################################################
+# Cross Validation - determine final model
+################################################################################
+# 14-fold cross validation - set seed to 8, only do 13 folds - 
+# -> issue with pca: cannot rescale a constant/zero column to unit variance
+# 7 fold cv - set seed to 64
+set.seed(8)
+nmod = 3 # number of models
+nfold = 14 # Number of folds
+fold_size = 56/nfold # number of obs per fold
+samp = sample(56, 56)
+RMSE = as.data.frame(matrix(NA, nrow = nfold*nmod, ncol = 3))
+colnames(RMSE) = c("Model", "Fold", "RMSE")
+
+# For each fold
+for(i in 1:13){
+  # split into training and test for this fold
+  test  = data_rf[samp[(i*fold_size-3):(i*fold_size)],]
+  train = data_rf[samp[-((i*fold_size-3):(i*fold_size))],]
+  # sum(train$Spotted.Bass>1)
+  # build models on training set
+  # mod1_cv = manyglm(formula = as.mvabund(train[,43:47]) ~ Latitude + 
+  #                     Longitude + 
+  #                     pH + 
+  #                     EC +
+  #                     DO + 
+  #                     Temp + 
+  #                     Ammonia + 
+  #                     Phosphorous + 
+  #                     Nitrite + 
+  #                     Nitrate + 
+  #                     Total_Iron + 
+  #                     Phosphonate + 
+  #                     TDS + 
+  #                     Inorg_Nitrogen +
+  #                     Elevation + 
+  #                     Flow + 
+  #                     Slope + 
+  #                     Silt.Sand.Substrate + 
+  #                     Gravel.Substrate + 
+  #                     Cobble.Substrate +
+  #                     Boulder.Substrate + 
+  #                     Bedrock.Substrate + 
+  #                     Woody.Debris + 
+  #                     No.Woody.Debris + 
+  #                     Undercut.Bank + 
+  #                     No.Undercut.Bank + 
+  #                     No.Macrophytes + 
+  #                     Scarce.Macrophytes + 
+  #                     Moderate.Macrophytes + 
+  #                     Abundant.Macrophytes + 
+  #                     Open.Canopy + 
+  #                     Partial.Canopy + 
+  #                     Closed.Canopy + 
+  #                     Shallow.Water.Dep + 
+  #                     Moderate.Water.Dep + 
+  #                     Deep.Water.Dep + 
+  #                     Very.Deep.Water.Dep + 
+  #                     Narrow.River.Wid + 
+  #                     Moderate.River.Wid + 
+  #                     Wide.River.Wid + 
+  #                     Very.Wide.Wid, 
+  #                   data = train[,2:42], 
+  #                   family = "negative_binomial",
+  #                   cor.type="shrink")
+  # mod2_cv = manyglm(formula = as.mvabund(train[,43:47]) ~ Latitude + 
+  #                     pH + 
+  #                     EC +
+  #                     DO + 
+  #                     Temp + 
+  #                     Ammonia + 
+  #                     Phosphorous + 
+  #                     Nitrite + 
+  #                     Nitrate + 
+  #                     Total_Iron + 
+  #                     Phosphonate + 
+  #                     TDS + 
+  #                     Slope + 
+  #                     Gravel.Substrate + 
+  #                     Cobble.Substrate +
+  #                     Boulder.Substrate + 
+  #                     Bedrock.Substrate +
+  #                     No.Woody.Debris + 
+  #                     Undercut.Bank + 
+  #                     No.Undercut.Bank + 
+  #                     Scarce.Macrophytes + 
+  #                     Moderate.Macrophytes + 
+  #                     Abundant.Macrophytes + 
+  #                     Partial.Canopy + 
+  #                     Closed.Canopy + 
+  #                     Moderate.Water.Dep + 
+  #                     Deep.Water.Dep + 
+  #                     Very.Deep.Water.Dep + 
+  #                     Narrow.River.Wid + 
+  #                     Moderate.River.Wid +
+  #                     Very.Wide.Wid,
+  #                   data = train[,2:42], 
+  #                   family = "negative_binomial",
+  #                   cor.type="shrink")
+  
+  mod3_cv5 <- manyglm(as.mvabund(train[,43:47]) ~ pH +
+                       Elevation +
+                       Longitude +
+                       Open.Canopy + 
+                       Wide.River.Wid, 
+                     data = train[,2:42],
+                  family = "negative_binomial",
+                  cor.type="shrink")
+  
+  # mod3_cv10 <- manyglm(as.mvabund(train[,43:47]) ~ pH +
+  #                       Elevation +
+  #                       Longitude +
+  #                       Open.Canopy + 
+  #                       Wide.River.Wid + 
+  #                       Moderate.River.Wid +
+  #                       Phosphonate +
+  #                       Very.Wide.Wid + 
+  #                       Narrow.River.Wid + 
+  #                       EC, 
+  #                     data = train[,2:42],
+  #                     family = "negative_binomial",
+  #                     cor.type="shrink")
+  
+  mod3_cv15 <- manyglm(as.mvabund(train[,43:47]) ~ pH +
+                         Elevation +
+                         Longitude +
+                         Open.Canopy + 
+                         Wide.River.Wid + 
+                         Moderate.River.Wid +
+                         Phosphonate +
+                         Very.Wide.Wid + 
+                         Narrow.River.Wid + 
+                         EC +
+                         Gravel.Substrate + 
+                         Total_Iron + 
+                         No.Macrophytes + 
+                         Scarce.Macrophytes + 
+                         Inorg_Nitrogen, 
+                       data = train[,2:42],
+                       family = "negative_binomial",
+                       cor.type="shrink")
+  
+  # mod3_cv23 <- manyglm(as.mvabund(train[,43:47]) ~ pH +
+  #                        Elevation +
+  #                        Longitude +
+  #                        Open.Canopy + 
+  #                        Wide.River.Wid + 
+  #                        Moderate.River.Wid +
+  #                        Phosphonate +
+  #                        Very.Wide.Wid + 
+  #                        Narrow.River.Wid + 
+  #                        EC +
+  #                        Gravel.Substrate + 
+  #                        Total_Iron + 
+  #                        No.Macrophytes + 
+  #                        Scarce.Macrophytes + 
+  #                        Inorg_Nitrogen + 
+  #                        Nitrite + 
+  #                        DO + 
+  #                        Flow + 
+  #                        Silt.Sand.Substrate + 
+  #                        Closed.Canopy + 
+  #                        Slope + 
+  #                        Bedrock.Substrate + 
+  #                        Nitrate, 
+  #                      data = train[,2:42],
+  #                      family = "negative_binomial",
+  #                      cor.type="shrink")
+  
+  # mod3_cv28 <- manyglm(as.mvabund(train[,43:47]) ~ pH +
+  #                        Elevation +
+  #                        Longitude +
+  #                        Open.Canopy + 
+  #                        Wide.River.Wid + 
+  #                        Moderate.River.Wid +
+  #                        Phosphonate +
+  #                        Very.Wide.Wid + 
+  #                        Narrow.River.Wid + 
+  #                        EC +
+  #                        Gravel.Substrate + 
+  #                        Total_Iron + 
+  #                        No.Macrophytes + 
+  #                        Scarce.Macrophytes + 
+  #                        Inorg_Nitrogen + 
+  #                        Nitrite + 
+  #                        DO + 
+  #                        Flow + 
+  #                        Silt.Sand.Substrate + 
+  #                        Closed.Canopy + 
+  #                        Slope + 
+  #                        Bedrock.Substrate + 
+  #                        Nitrate + 
+  #                        Woody.Debris + 
+  #                        Temp + 
+  #                        Shallow.Water.Dep + 
+  #                        Abundant.Macrophytes + 
+  #                        Undercut.Bank, 
+  #                      data = train[,2:42],
+  #                      family = "negative_binomial",
+  #                      cor.type="shrink")
+
+  # PCA
+  pca = prcomp(train[,2:42], retx = TRUE, center = TRUE, scale = TRUE)
+  coords_train <- cbind(Sites = train$Sites, as.data.frame(as.matrix(train[,2:42])%*%pca$rotation[,1:8]))
+  
+  mod4_cv <- manyglm(as.mvabund(train[,43:47]) ~ PC1 + 
+                    PC2 + 
+                    PC3 + 
+                    PC4 + 
+                    PC5 + 
+                    PC6 +
+                    PC7 +
+                    PC8, 
+                  data = coords_train,
+                  family = "negative_binomial",
+                  cor.type="shrink")
+  
+  # evaluate performance on test set RMSE
+  newdata_expl = test[,2:42]
+  newdata_resp = test[,43:47]
+
+  # Full model
+  # rmse1 = sqrt(sum((predict(mod1_cv, newdata_expl, type = "response") - newdata_resp)^2)/(fold_size*5))
+  # RMSE[i+nfold*0,] = c("Full", i, rmse1)
+  # 
+  # # VIF model
+  # rmse2 = sqrt(sum((predict(mod2_cv, newdata_expl, type = "response") - newdata_resp)^2)/(fold_size*5))
+  # RMSE[i+nfold*1,] = c("VIF", i, rmse2)
+  
+  # Stepwise model 5
+  rmse3.5 = sqrt(sum((predict(mod3_cv5, newdata_expl, type = "response") - newdata_resp)^2)/(fold_size*5))
+  RMSE[i+nfold*0,] = c("Step5", i, rmse3.5)
+  
+  # Stepwise model 10
+  # rmse3.10 = sqrt(sum((predict(mod3_cv10, newdata_expl, type = "response") - newdata_resp)^2)/(fold_size*5))
+  # RMSE[i+nfold*3,] = c("Step10", i, rmse3.10)
+  
+  # Stepwise model 15
+  rmse3.15 = sqrt(sum((predict(mod3_cv15, newdata_expl, type = "response") - newdata_resp)^2)/(fold_size*5))
+  RMSE[i+nfold*1,] = c("Step15", i, rmse3.15)
+  
+  # Stepwise model 23
+  # rmse3.23 = sqrt(sum((predict(mod3_cv23, newdata_expl, type = "response") - newdata_resp)^2)/(fold_size*5))
+  # RMSE[i+nfold*5,] = c("Step23", i, rmse3.23)
+  # 
+  # Stepwise model 28
+  # rmse3.28 = sqrt(sum((predict(mod3_cv28, newdata_expl, type = "response") - newdata_resp)^2)/(fold_size*5))
+  # RMSE[i+nfold*2,] = c("Step28", i, rmse3.28)
+
+  # PCA model
+  newdata_expl_pcs = cbind(Sites = test$Sites, as.data.frame(as.matrix(test[,2:42])%*%pca$rotation[,1:8]))
+  rmse4 = sqrt(sum((predict(mod4_cv, newdata_expl_pcs, type = "response") - newdata_resp)^2)/(fold_size*5))
+  RMSE[i+nfold*2,] = c("PCA", i, rmse4)
+}
+
+RMSE$RMSE = as.numeric(RMSE$RMSE)
+
+################################################################################
+# Goodness of fit
+################################################################################
+# Mean RMSE after CV
+# mean(filter(RMSE, Model == "Full")$RMSE[1:12])
+# mean(filter(RMSE, Model == "VIF")$RMSE)
+mean(filter(RMSE, Model == "Step5")$RMSE)
+# mean(filter(RMSE, Model == "Step10")$RMSE[c(1, 3:13)])
+mean(filter(RMSE, Model == "Step15")$RMSE[c(1, 3:13)])
+# mean(filter(RMSE, Model == "Step23")$RMSE[c(1, 3:13)])
+# mean(filter(RMSE, Model == "Step28")$RMSE[c(1, 3:13)])
+mean(filter(RMSE, Model == "PCA")$RMSE)
+
+# RMSE on training set
+# sqrt(sum((predict(mod1, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+# sqrt(sum((predict(mod2, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+sqrt(sum((predict(mod3.5, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+# sqrt(sum((predict(mod3.10, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+sqrt(sum((predict(mod3.15, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+# sqrt(sum((predict(mod3.23, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+# sqrt(sum((predict(mod3.28, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+sqrt(sum((predict(mod4, coords[,2:9], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+
+# Mean AIC
+# mean(AIC(mod1))
+# mean(AIC(mod2))
+mean(AIC(mod3.5))
+# mean(AIC(mod3.10))
+mean(AIC(mod3.15))
+# mean(AIC(mod3.23))
+# mean(AIC(mod3.28))
+mean(AIC(mod4))
+
+# Mean BIC
+# mean(BIC(mod1))
+# mean(BIC(mod2))
+mean(BIC(mod3.5))
+# mean(BIC(mod3.10))
+mean(BIC(mod3.15))
+# mean(BIC(mod3.23))
+# mean(BIC(mod3.28))
+mean(BIC(mod4))
+
+# BICs
+# BIC(mod1)
+# BIC(mod2)
+BIC(mod3.5)
+# BIC(mod3.10)
+BIC(mod3.15)
+# BIC(mod3.23)
+# BIC(mod3.28)
+BIC(mod4)
+
+################################################################################
+# Factor Analysis?
+################################################################################
+fa_rf = factanal(cor(data_rf[,2:42]), factors = 10, rotation = "varimax")
+svd(cor(data_rf[,2:42]))
+
+# Choose 8 (broken stick - same eigs as pca)
+svd.out<- svd(cor(data_rf[,2:42]))
+gamma.mat <- svd.out$v[,1:8] %*% diag(sqrt(svd.out$d[1:8]))
+rownames(gamma.mat) <- colnames(data_rf[,2:42])
+gamma.mat <- varimax(gamma.mat)$loadings
+fa_mat = matrix(gamma.mat,ncol=8)
+
+plot(gamma.mat[,2]~gamma.mat[,1], pch = 19)
+text(gamma.mat[,2]~gamma.mat[,1], labels = rownames(gamma.mat), cex = 0.75)
+
+plot(gamma.mat[,4]~gamma.mat[,3], pch = 19)
+text(gamma.mat[,4]~gamma.mat[,3], labels = rownames(gamma.mat), cex = 0.75)
+
+plot(gamma.mat[,6]~gamma.mat[,5], pch = 19)
+text(gamma.mat[,6]~gamma.mat[,5], labels = rownames(gamma.mat), cex = 0.75)
 
 
-length(train_nocor)
+library(rgl)
+# Create 3D scatter plot
+plot3d(gamma.mat[,1], gamma.mat[,2], gamma.mat[,3], 
+       pty = 19)
+text3d(gamma.mat[,1], gamma.mat[,2], gamma.mat[,3], 
+       texts = rownames(gamma.mat), adj = c(0.5, 0.5), 
+       cex = 0.5)
 
-test
-train_nocor
-
-test_pcscores = (as.matrix(test[2:42])%*%pca$rotation[,1:13])[,1:6]
-predict(mod4, type = "response", newdata = as.data.frame(test_pcscores))
-as.data.frame(test_pcscores)
-
-
-
-
-
-
-
-
+# mod3.41 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
+#                      Elevation +
+#                      Longitude +
+#                      Open.Canopy +
+#                      Wide.River.Wid +
+#                      Moderate.River.Wid +
+#                      Phosphonate +
+#                      Very.Wide.Wid +
+#                      Narrow.River.Wid +
+#                      EC +
+#                      Gravel.Substrate +
+#                      Total_Iron +
+#                      No.Macrophytes +
+#                      Scarce.Macrophytes +
+#                      Inorg_Nitrogen +
+#                      Nitrite +
+#                      DO +
+#                      Flow +
+#                      Silt.Sand.Substrate +
+#                      Closed.Canopy +
+#                      Slope +
+#                      Bedrock.Substrate +
+#                      Nitrate +
+#                      Woody.Debris +
+#                      Temp +
+#                      Shallow.Water.Dep +
+#                      Abundant.Macrophytes +
+#                      Undercut.Bank +
+#                      Deep.Water.Dep +
+#                      No.Woody.Debris +
+#                      No.Undercut.Bank +
+#                      Moderate.Water.Dep +
+#                      Very.Deep.Water.Dep +
+#                      Phosphorous +
+#                      TDS +
+#                      Latitude +
+#                      Boulder.Substrate +
+#                      Cobble.Substrate +
+#                      Ammonia +
+#                      Moderate.Macrophytes,
+#                    data = data_rf[,2:42],
+#                    family = "negative_binomial")
+# sqrt(sum((predict(mod3.41, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
