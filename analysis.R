@@ -111,11 +111,11 @@ max(abs((cor(data_rf_nocor[,2:33])<1)*cor(data_rf_nocor[,2:33])))
 #   geom_point(aes(col = clust)) + 
 #   geom_text(hjust = -0.25,aes(col = clust))
 # 
-# # colour by presence of fish at a site
-# fish_binary = apply(data_rf[,43:47], MARGIN = c(1, 2), FUN = function(x){if(x>0) 
-#   return(as.factor(1)) 
-#   else{return(as.factor(0))}})
-# coords_fish = cbind(coords, fish_binary)
+# colour by presence of fish at a site
+fish_binary = apply(data_rf[,43:47], MARGIN = c(1, 2), FUN = function(x){if(x>0)
+  return(as.factor(1))
+  else{return(as.factor(0))}})
+coords_fish = cbind(coords, fish_binary)
 # 
 # # Heuningnes Redfin
 # ggplot(coords_fish, aes(x = NMDS1, y = NMDS2, label=Sites)) + 
@@ -258,19 +258,19 @@ rownames(pcs)[neg]
 ################################################################################
 # Kernel PCA
 ################################################################################
-library(kernlab)
-mat_rf  = as.matrix(data_rf[2:42])
-kpca_rf = kpca(x = mat_rf, kernel = "rbfdot", kpar = list(sigma = 0.0001),
-     features = 15, th = 1e-4)
-# pcv(kpca_rf)
-eig(kpca_rf)
-# As sigma gets smaller ie. closer to linear pca, eig get larger
-
-# Laplace
-kpca_rf = kpca(x = mat_rf, kernel = "laplacedot", kpar = list(sigma = 0.019),
-               features = 15, th = 1e-4)
-# pcv(kpca_rf)
-eig(kpca_rf)
+# library(kernlab)
+# mat_rf  = as.matrix(data_rf[2:42])
+# kpca_rf = kpca(x = mat_rf, kernel = "rbfdot", kpar = list(sigma = 0.0001),
+#      features = 15, th = 1e-4)
+# # pcv(kpca_rf)
+# eig(kpca_rf)
+# # As sigma gets smaller ie. closer to linear pca, eig get larger
+# 
+# # Laplace
+# kpca_rf = kpca(x = mat_rf, kernel = "laplacedot", kpar = list(sigma = 0.019),
+#                features = 15, th = 1e-4)
+# # pcv(kpca_rf)
+# eig(kpca_rf)
 
 # Spline
 # kpca_rf = kpca(x = mat_rf, kernel = "splinedot",
@@ -348,13 +348,13 @@ mod1_plot = plot(mod1, subtitle = NULL) #Yes
 # Test for treatment effects
 # an_mod1_unadj = anova(mod1, p.uni = "unadjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
 # saveRDS(an_mod1_unadj, "an_mod1_unadj.RDS")
-an_mod1_unadj = readRDS("an_mod1_unadj.RDS")
+an_mod1_unadj = readRDS("data/an_mod1_unadj.RDS")
 # an_mod1_adj   = anova(mod1, p.uni = "adjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
 # saveRDS(an_mod1_adj, "an_mod1_adj.RDS")
-an_mod1_adj = readRDS("an_mod1_adj.RDS")
+an_mod1_adj = readRDS("data/an_mod1_adj.RDS")
 # summ_mod1 = summary(mod1)
 # saveRDS(summ_mod1, "summ_mod1.RDS")
-summ_mod1 = readRDS("summ_mod1.RDS")
+summ_mod1 = readRDS("data/summ_mod1.RDS")
 
 # xtable(an_mod1$table)
 # xtable(an_mod1$uni.p)
@@ -403,69 +403,69 @@ mod2_plot = plot(mod2, subtitle = NULL) #Yes
 # Test for treatment effects
 # an_mod2_unadj = anova(mod2, p.uni = "unadjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
 # saveRDS(an_mod2_unadj, "an_mod2_unadj.RDS")
-an_mod2_unadj = readRDS("an_mod2_unadj.RDS")
+an_mod2_unadj = readRDS("data/an_mod2_unadj.RDS")
 # an_mod2_adj   = anova(mod2, p.uni = "adjusted", cor.type = "shrink", test = "wald", resamp = "montecarlo")
 # saveRDS(an_mod2_adj, "an_mod2_adj.RDS")
-an_mod2_adj = readRDS("an_mod2_adj.RDS")
+an_mod2_adj = readRDS("data/an_mod2_adj.RDS")
 # summ_mod2 = summary(mod2)
 # saveRDS(summ_mod2, "summ_mod2.RDS")
-summ_mod2 = readRDS("summ_mod2.RDS")
+summ_mod2 = readRDS("data/summ_mod2.RDS")
 
 # xtable(an_mod1$table)
 # xtable(an_mod1$uni.p)
 
 # BEST SUBSET REGRESSION
-best_bic = rep(Inf, 41) # where index indicates number of expl variables in model
-best_comb = matrix(0, nrow = 41, ncol = 41)
+#' best_bic = rep(Inf, 41) # where index indicates number of expl variables in model
+#' best_comb = matrix(0, nrow = 41, ncol = 41)
 expl_vars = data_rf[,2:42]
-for(i in 41:1){
-  print(i)
-  # build model with every combination of i variables
-  # i.e. when i = 41, we will be building a full model
-  # when i = 1, we will be building a model with 1 expl variable
-  mods = combn(1:41, i)
-  # build each model
-  for(j in 1:ncol(mods)){
-    current_mod = manyglm(as.mvabund(data_rf[,43:47]) ~ as.matrix(expl_vars[,mods[,j]]), 
-                          family = "negative_binomial",
-                          cor.type="shrink")
-    current_bic = mean(BIC(current_mod))
-    if(current_bic<best_bic[i]){
-      best_bic[i] = current_bic
-      best_comb[1:i,i] = mods[,j]
-    }
-  }
-}
-# saveRDS(best_bic, "data/best_bic_36_41.RDS")
-# saveRDS(best_comb, "data/best_comb_36_41.RDS")
-best_bic = readRDS("data/best_bic_36_41.RDS")
-best_comb = readRDS("data/best_comb_36_41.RDS")
-
-setdiff(best_comb[,41], best_comb[,36])
-#' 19 
-#' 22 and 32
-#' 19 30 and 33
-#' 20 21 28 and 33
-#' 19 21 27 29 and 34
-colnames(data_rf)
-
-set.seed(1)
-mod3 <- manyglm(as.mvabund(data_rf[,43:47]) ~ , 
-                family = "negative_binomial", 
-                theta.method = "PHI", 
-                maxiter2 = 10)
-mod3_plot = plot(mod3, subtitle = NULL) #Yes
-# ggsave("plots/mod3.png", plot = mod3_plot, width = 6, height = 4)
-# Test for treatment effects
-# an_mod3_unadj = anova(mod3, p.uni = "unadjusted", resamp = "montecarlo")
-# saveRDS(an_mod3_unadj, "an_mod3_unadj.RDS")
-an_mod3_unadj = readRDS("an_mod3_unadj.RDS")
-# an_mod3_adj   = anova(mod3, p.uni = "adjusted", resamp = "montecarlo")
-# saveRDS(an_mod3_adj, "an_mod3_adj.RDS")
-an_mod3_adj = readRDS("an_mod3_adj.RDS")
-# summ_mod3 = summary(mod3)
-# saveRDS(summ_mod3, "summ_mod3.RDS")
-summ_mod3 = readRDS("summ_mod3.RDS")
+#' for(i in 41:1){
+#'   print(i)
+#'   # build model with every combination of i variables
+#'   # i.e. when i = 41, we will be building a full model
+#'   # when i = 1, we will be building a model with 1 expl variable
+#'   mods = combn(1:41, i)
+#'   # build each model
+#'   for(j in 1:ncol(mods)){
+#'     current_mod = manyglm(as.mvabund(data_rf[,43:47]) ~ as.matrix(expl_vars[,mods[,j]]), 
+#'                           family = "negative_binomial",
+#'                           cor.type="shrink")
+#'     current_bic = mean(BIC(current_mod))
+#'     if(current_bic<best_bic[i]){
+#'       best_bic[i] = current_bic
+#'       best_comb[1:i,i] = mods[,j]
+#'     }
+#'   }
+#' }
+#' # saveRDS(best_bic, "data/best_bic_36_41.RDS")
+#' # saveRDS(best_comb, "data/best_comb_36_41.RDS")
+#' best_bic = readRDS("data/best_bic_36_41.RDS")
+#' best_comb = readRDS("data/best_comb_36_41.RDS")
+#' 
+#' setdiff(best_comb[,41], best_comb[,36])
+#' #' 19 
+#' #' 22 and 32
+#' #' 19 30 and 33
+#' #' 20 21 28 and 33
+#' #' 19 21 27 29 and 34
+#' colnames(data_rf)
+#' 
+#' set.seed(1)
+#' mod3 <- manyglm(as.mvabund(data_rf[,43:47]) ~ , 
+#'                 family = "negative_binomial", 
+#'                 theta.method = "PHI", 
+#'                 maxiter2 = 10)
+#' mod3_plot = plot(mod3, subtitle = NULL) #Yes
+#' # ggsave("plots/mod3.png", plot = mod3_plot, width = 6, height = 4)
+#' # Test for treatment effects
+#' # an_mod3_unadj = anova(mod3, p.uni = "unadjusted", resamp = "montecarlo")
+#' # saveRDS(an_mod3_unadj, "an_mod3_unadj.RDS")
+#' an_mod3_unadj = readRDS("an_mod3_unadj.RDS")
+#' # an_mod3_adj   = anova(mod3, p.uni = "adjusted", resamp = "montecarlo")
+#' # saveRDS(an_mod3_adj, "an_mod3_adj.RDS")
+#' an_mod3_adj = readRDS("an_mod3_adj.RDS")
+#' # summ_mod3 = summary(mod3)
+#' # saveRDS(summ_mod3, "summ_mod3.RDS")
+#' summ_mod3 = readRDS("summ_mod3.RDS")
 
 # xtable(an_mod3$table)
 # xtable(an_mod3$uni.p)
@@ -485,7 +485,7 @@ for(i in 41:1){
     current_mod = manyglm(as.mvabund(data_rf[,43:47]) ~ as.matrix(expl_vars[,mods[,j]]), 
                           family = "negative_binomial",
                           cor.type="shrink")
-    current_bic = mean(BIC(current_mod))
+    current_bic = mean(BIC(current_mod)[1:2])
     if(current_bic<best_bic[i]){
       best_bic[i] = current_bic
       best_rmv[i] = setdiff(vars, mods[,j])
@@ -530,25 +530,40 @@ axis(1, at = seq(0, 40, by = 5), labels = seq(0, 40, by = 5), cex.axis = 1.5)
 # Test for treatment effects
 # an_mod3_unadj = anova(mod3, p.uni = "unadjusted", resamp = "montecarlo")
 # saveRDS(an_mod3_unadj, "an_mod3_unadj.RDS")
-an_mod3_unadj = readRDS("an_mod3_unadj.RDS")
+an_mod3_unadj = readRDS("data/an_mod3_unadj.RDS")
 # an_mod3_adj   = anova(mod3, p.uni = "adjusted", resamp = "montecarlo")
 # saveRDS(an_mod3_adj, "an_mod3_adj.RDS")
-an_mod3_adj = readRDS("an_mod3_adj.RDS")
+an_mod3_adj = readRDS("data/an_mod3_adj.RDS")
 # summ_mod3 = summary(mod3)
 # saveRDS(summ_mod3, "summ_mod3.RDS")
-summ_mod3 = readRDS("summ_mod3.RDS")
+summ_mod3 = readRDS("data/summ_mod3.RDS")
 
 mod3.5 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
                       Elevation +
                       Longitude +
                       Open.Canopy + 
-                      Wide.River.Wid + 
-                      Moderate.River.Wid +
-                      Phosphonate, 
+                      Wide.River.Wid, 
                     data = data_rf[,2:42],
                     family = "negative_binomial",
                   cor.type="shrink")
 plot(mod3.5, subtitle = NULL) 
+# an_mod3.5_adj   = anova(mod3.5, p.uni = "adjusted", resamp = "montecarlo")
+# saveRDS(an_mod3.5_adj, "an_mod3.5_adj.RDS")
+an_mod3.5_adj = readRDS("data/an_mod3.5_adj.RDS")
+xtable(coef(mod3.5), digits = 3)
+data_rf$Heuningnes.Redfin
+sqrt(mean((predict.manyglm(mod3.5, type = "response")[,1]-data_rf$Heuningnes.Redfin)^2))
+sqrt(mean((predict.manyglm(mod3.5, type = "response")[,2]-data_rf$Cape.Kurper)^2))
+sqrt(mean((predict.manyglm(mod3.5, type = "response")[,3]-data_rf$Cape.Galaxias)^2))
+sqrt(mean((predict.manyglm(mod3.5, type = "response")[,4]-data_rf$Spotted.Bass)^2))
+sqrt(mean((predict.manyglm(mod3.5, type = "response")[,5]-data_rf$Bluegill.Sunfish)^2))
+# summ_mod3.5 = summary(mod3.5)
+# saveRDS(summ_mod3.5, "summ_mod3.5.RDS")
+# summ_mod3.5 = readRDS("summ_mod3.5.RDS")
+# ?anova.manyglm
+min(data_rf$Longitude)-max(data_rf$Longitude)
+
+
 
 mod3.10 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
                        Elevation +
@@ -669,39 +684,17 @@ mod4_plot = plot(mod4, subtitle = NULL) #Yes
 # ggsave("plots/mod4.png", plot = mod4_plot, width = 6, height = 4)
 # Test for treatment effects
 # an_mod4_unadj = anova(mod4, p.uni = "unadjusted", resamp = "montecarlo")
-# saveRDS(an_mod4_unadj, "an_mod4_unadj.RDS")
-an_mod4_unadj = readRDS("an_mod4_unadj.RDS")
+# saveRDS(an_mod4_unadj, "data/an_mod4_unadj.RDS")
+an_mod4_unadj = readRDS("data/an_mod4_unadj.RDS")
 # an_mod4_adj   = anova(mod4, p.uni = "adjusted", resamp = "montecarlo")
-# saveRDS(an_mod4_adj, "an_mod4_adj.RDS")
-an_mod4_adj = readRDS("an_mod4_adj.RDS")
+# saveRDS(an_mod4_adj, "data/an_mod4_adj.RDS")
+an_mod4_adj = readRDS("data/an_mod4_adj.RDS")
 # summ_mod4 = summary(mod4)
-# saveRDS(summ_mod4, "summ_mod4.RDS")
-summ_mod4 = readRDS("summ_mod4.RDS")
+# saveRDS(summ_mod4, "data/summ_mod4.RDS")
+summ_mod4 = readRDS("data/summ_mod4.RDS")
 
 # xtable(an_mod4$table)
 # xtable(an_mod4$uni.p)
-
-# NONLINEAR METHOD
-set.seed(1)
-mod5 <- manyglm(data_rf_mvabund[,43:47] ~ , 
-                family = "negative_binomial",
-                cor.type="shrink")
-mod5_plot = plot(mod5, subtitle = NULL) #Yes
-# ggsave("plots/mod5.png", plot = mod5_plot, width = 6, height = 4)
-# Test for treatment effects
-# an_mod5_unadj = anova(mod5, p.uni = "unadjusted", resamp = "montecarlo")
-# saveRDS(an_mod5_unadj, "an_mod5_unadj.RDS")
-an_mod5_unadj = readRDS("an_mod5_unadj.RDS")
-# an_mod5_adj   = anova(mod5, p.uni = "adjusted", resamp = "montecarlo")
-# saveRDS(an_mod5_adj, "an_mod5_adj.RDS")
-an_mod5_adj = readRDS("an_mod5_adj.RDS")
-# summ_mod5 = summary(mod5)
-# saveRDS(summ_mod5, "summ_mod5.RDS")
-summ_mod5 = readRDS("summ_mod5.RDS")
-
-# xtable(an_mod5$table)
-# xtable(an_mod5$uni.p)
-
 
 ################################################################################
 # Map
@@ -711,7 +704,7 @@ library(leaflet)
 
 long_lat <- data_loc[,c(1, 4, 3)]
 colnames(long_lat) = c("Site", "lng", "lat")
-long_lat[54,]
+as.matrix(long_lat)[55,]
 leaflet() %>%
   addTiles() %>%
   setView(lng = 19.83141, lat = -34.425, zoom = 8)%>%
@@ -722,9 +715,9 @@ leaflet() %>%
   setView(lng = 19.83141, lat = -34.425, zoom = 12)%>%
   addMarkers(data = long_lat[,2:3], label = long_lat$Site, 
              labelOptions = c(permanent = FALSE))
-?addMarkers
-summary(long_lat)
-
+# ?addMarkers
+# summary(long_lat)
+# ?manyglm
 ################################################################################
 # GLLVM
 ################################################################################
@@ -1008,12 +1001,20 @@ mean(filter(RMSE, Model == "PCA")$RMSE)
 # RMSE on training set
 # sqrt(sum((predict(mod1, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
 # sqrt(sum((predict(mod2, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
-sqrt(sum((predict(mod3.5, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+mod3.5 <- manyglm(as.mvabund(data_rf[,43:47]) ~ pH +
+                      Elevation +
+                      Longitude +
+                      Open.Canopy + 
+                      Wide.River.Wid, 
+                    data = data_rf[,2:42],
+                    family = "negative_binomial",
+                    cor.type="shrink")
+sqrt(sum((predict(mod3.5, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(56*5))
 # sqrt(sum((predict(mod3.10, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
-sqrt(sum((predict(mod3.15, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+sqrt(sum((predict(mod3.15, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(56*5))
 # sqrt(sum((predict(mod3.23, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
 # sqrt(sum((predict(mod3.28, data_rf[,2:42], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
-sqrt(sum((predict(mod4, coords[,2:9], type = "response") - data_rf[,43:47])^2)/(fold_size*5))
+sqrt(sum((predict(mod4, coords[,2:9], type = "response") - data_rf[,43:47])^2)/(56*5))
 
 # Mean AIC
 # mean(AIC(mod1))
@@ -1048,9 +1049,6 @@ BIC(mod4)
 ################################################################################
 # Factor Analysis?
 ################################################################################
-fa_rf = factanal(cor(data_rf[,2:42]), factors = 10, rotation = "varimax")
-svd(cor(data_rf[,2:42]))
-
 # Choose 8 (broken stick - same eigs as pca)
 svd.out<- svd(cor(data_rf[,2:42]))
 gamma.mat <- svd.out$v[,1:8] %*% diag(sqrt(svd.out$d[1:8]))
